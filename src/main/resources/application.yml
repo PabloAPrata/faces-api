@@ -1,0 +1,13 @@
+server:
+    context-path: /queuehandler
+    port: 8081
+security:
+    sessions: NEVER
+spring:
+    elasticsearch:
+        host: 192.168.15.104
+        port: 9300
+    redis:
+        host: 192.168.15.104
+        port: 6379
+
