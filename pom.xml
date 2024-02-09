@@ -79,6 +79,12 @@
             <artifactId>spring-jdbc</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.mediaportal</groupId>
+            <artifactId>utils</artifactId>
+            <version>1.2.1</version>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>

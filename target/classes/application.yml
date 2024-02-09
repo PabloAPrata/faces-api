@@ -1,7 +1,8 @@
 server:
-    port: 8080
-datasource:
-    driver-class-name: com.informix.jdbc.IfxDriver
+  port: 8080
+spring:
+  datasource:
     url: jdbc:informix-sqli://192.168.15.30:9088/sescsp:INFORMIXSERVER=ol_database
     username: informix
     password: I1n2f3o4
+    driver-class-name: com.informix.jdbc.IfxDriver
