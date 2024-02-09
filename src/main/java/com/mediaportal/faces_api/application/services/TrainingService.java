@@ -2,9 +2,11 @@ package com.mediaportal.faces_api.application.services;
 
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
 import com.mediaportal.faces_api.application.dto.PostTrainingMPAIDTO;
+import com.mediaportal.faces_api.application.repository.JobRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import java.time.LocalDateTime;
 
 @Service
 public class TrainingService {
@@ -32,7 +34,14 @@ public class TrainingService {
     public ClientActivateJobDTO getFromMPAI() {
         RestTemplate restTemplate = new RestTemplate();
 
-        return restTemplate.getForObject(TRAIN_URL, ClientActivateJobDTO.class);
+        ClientActivateJobDTO responseMPAI = restTemplate.getForObject(TRAIN_URL, ClientActivateJobDTO.class);
+
+        LocalDateTime currentDateTime = LocalDateTime.now();
+        JobRepository jobRepository = new JobRepository();
+
+        jobRepository.RecordJobRepository(responseMPAI.getId(), 1, currentDateTime.toString());
+
+        return responseMPAI;
     }
 
     private void SynchronizeDatabaseWithFolders() {
