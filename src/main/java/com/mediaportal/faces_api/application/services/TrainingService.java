@@ -1,5 +1,5 @@
 package com.mediaportal.faces_api.application.services;
-
+// DEPOIS DE PRONTO. DEVE SER TROCADA A CHAMADA DA FUNÇÃO getFileNamesFromJson POR getSchemaFilesFromDatabase()
 import com.google.gson.Gson;
 import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
@@ -11,65 +11,54 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
 @Service
 public class TrainingService {
 
-    private final String TRAIN_MPAI_FOLDER = "QUALIFICADOS";
+    private static final String TRAIN_MPAI_FOLDER = "QUALIFICADOS";
+    private static final String COMPLETE_TRAINING_FOLDER = "CompleteTrainingFolder";
+    private static final String EXPRESS_TRAINING_FOLDER = "ExpressTrainingFolder";
+    private static final String MPAI_BRIDGE_FILES_URL = "http://localhost:3001/files";
     //  private final String MPAI_BRIDGE_FILES_URL = BRAHMA_URL + "mpaibridge/files";
-    private final String MPAI_BRIDGE_FILES_URL = "http://localhost:3001/files";
-    Gson gson = new Gson();
-    RestTemplate restTemplate = new RestTemplate();
-    String nameFolder = null;
-    String nameFile = null;
-    @Value("${paths.brahma}")
-    private String BRAHMA_URL;
-    @Value("${paths.mpai}")
-    private String MPAI_URL;
-    @Value("${SHARED_FOLDER}")
-    private String WORK_FOLDER;
 
-    public TrainingService() {
+    @Value("${paths.brahma}")
+    private String brahmaUrl;
+
+    @Value("${paths.mpai}")
+    private String mpaiUrl;
+
+    @Value("${SHARED_FOLDER}")
+    private String workFolder;
+
+    private final RestTemplate restTemplate;
+    private final Gson gson;
+
+    public TrainingService(RestTemplate restTemplate, Gson gson) {
+        this.restTemplate = restTemplate;
+        this.gson = gson;
     }
 
-    public ApiResponseDTO trainingMPAI(Boolean isComplete) {
-
-        ClientActivateJobDTO responseMPAI = null;
-        String trainingFolder = isComplete ? "CompleteTrainingFolder" : "ExpressTrainingFolder";
-
+    public ApiResponseDTO initiateTraining(Boolean isComplete) {
         try {
+            String trainingFolder = isComplete ? COMPLETE_TRAINING_FOLDER : EXPRESS_TRAINING_FOLDER;
             generateTrainingFolder(trainingFolder);
-        } catch (IOException e) {
-            return new ApiResponseDTO(503, null, e.getMessage());
-        }
-
-        try {
-            responseMPAI = requestTrainingToMpai(isComplete);
-        } catch (RestClientException re) {
-            return new ApiResponseDTO(503, null, re.getMessage());
-        }
-
-        try {
+            ClientActivateJobDTO responseMPAI = requestTrainingToMpai(isComplete);
             persistEventInDatabase(responseMPAI);
-        } catch (RestClientException re) {
-            return new ApiResponseDTO(503, null, re.getMessage());
+            return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Training initiated successfully!");
+        } catch (IOException | RestClientException e) {
+            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
         }
-
-        return new ApiResponseDTO(201, responseMPAI, "O treinamento foi iniciado com sucesso!");
-
     }
 
     private void generateTrainingFolder(String nameTrainingFolder) throws IOException {
@@ -78,7 +67,7 @@ public class TrainingService {
     }
 
     private void createMainTrainingFolder(String nameTrainingFolder) {
-        createFolder(WORK_FOLDER, nameTrainingFolder);
+        createFolder(workFolder, nameTrainingFolder);
     }
 
     private void copyFilesToTrainingFolder(String nameTrainingFolder) throws IOException {
@@ -86,17 +75,75 @@ public class TrainingService {
         for (String nameFolderPlusNameFile : fileNames) {
             String nameFolder = nameFolderPlusNameFile.split("/")[0];
             String nameFile = nameFolderPlusNameFile.split("/")[1];
-            createFolder(WORK_FOLDER + nameTrainingFolder, nameFolder);
-            Path origin = Paths.get(WORK_FOLDER + TRAIN_MPAI_FOLDER + "/" + nameFolder, nameFile);
-            Path destiny = Paths.get(WORK_FOLDER + nameTrainingFolder, nameFolder);
+            createFolder(workFolder + nameTrainingFolder, nameFolder);
+            Path origin = Paths.get(workFolder + COMPLETE_TRAINING_FOLDER + "/" + nameFolder, nameFile);
+            Path destination = Paths.get(workFolder + nameTrainingFolder, nameFolder);
 
-            try {
-                Files.copy(origin, destiny.resolve(nameFile));
-            } catch (IOException e) {
-                System.out.println("Não foi possível copiar o arquivo: " + e.getMessage());
+            Files.copy(origin, destination.resolve(nameFile), StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private List<String> getFileNamesFromJson() throws IOException {
+        RestTemplate restTemplate = new RestTemplate();
+        List<String> fileNames = new ArrayList<>();
+
+        // Construindo a URL com parâmetros, se necessário
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(MPAI_BRIDGE_FILES_URL);
+
+        try {
+            // Fazendo a requisição GET e recebendo a resposta como uma string JSON
+            ResponseEntity<String> responseEntity = restTemplate.exchange(builder.toUriString(), HttpMethod.GET, null, String.class);
+            if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                // Extraindo a string JSON do corpo da resposta
+                String json = responseEntity.getBody();
+
+                // Chamando o método para extrair os fileNames do JSON
+                fileNames = extractFileNamesFromJson(json);
+            } else {
+                System.out.println("A requisição não foi bem-sucedida. Status code: " + responseEntity.getStatusCodeValue());
             }
 
+            return fileNames;
+        } catch (Exception e) {
+            System.err.println("Erro ao obter a lista de pastas: " + e.getMessage());
+            throw new IOException("Erro ao obter a lista de pastas do servidor.");
+        }
+    }
 
+    private static List<String> extractFileNamesFromJson(String json) {
+        List<String> fileNames = new ArrayList<>();
+        Pattern pattern = Pattern.compile("\"fileName\"\\s*:\\s*\"([^\"]+)\"");
+        Matcher matcher = pattern.matcher(json);
+        while (matcher.find()) {
+            fileNames.add(matcher.group(1));
+        }
+        return fileNames;
+    }
+
+    private ClientActivateJobDTO requestTrainingToMpai(Boolean isComplete) throws RestClientException {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        String json = isComplete ? completeTrainingParams() : expressTrainingParams();
+        HttpEntity<String> request = new HttpEntity<>(json, headers);
+
+        System.out.println(request);
+
+        return restTemplate.postForObject(mpaiUrl + "train", request, ClientActivateJobDTO.class);
+    }
+
+    private void persistEventInDatabase(ClientActivateJobDTO responseMPAI) {
+        TrainDTO trainDTO = new TrainDTO();
+        trainDTO.setJob_id(responseMPAI.getId());
+        trainDTO.setType(1);
+
+        restTemplate.postForEntity(brahmaUrl + "mpaibridge/newevent", trainDTO, Void.class);
+    }
+
+    private void createFolder(String directory, String nameFolder) {
+        File newFolder = new File(directory, nameFolder);
+        if (!newFolder.exists() && !newFolder.mkdirs()) {
+            System.out.println("Failed to create directory: " + directory + nameFolder);
         }
     }
 
@@ -142,84 +189,5 @@ public class TrainingService {
         }
     }
 
-    private void createFolder(String directory, String nameFolder) {
-        File newFolder = new File(directory, nameFolder);
-
-        if (newFolder.exists()) {
-            return;
-        }
-
-        if (!newFolder.mkdirs()) {
-            System.out.println("Erro ao criar a pasta: " + directory + nameFolder);
-        }
-    }
-    private static List<String> extractFileNamesFromJson(String json) {
-        List<String> fileNames = new ArrayList<>();
-        Pattern pattern = Pattern.compile("\"fileName\"\\s*:\\s*\"([^\"]+)\"");
-        Matcher matcher = pattern.matcher(json);
-        while (matcher.find()) {
-            fileNames.add(matcher.group(1));
-        }
-        return fileNames;
-    }
-    private List<String> getFileNamesFromJson() throws IOException {
-        RestTemplate restTemplate = new RestTemplate();
-        List<String> fileNames = new ArrayList<>();
-
-        // Construindo a URL com parâmetros, se necessário
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(MPAI_BRIDGE_FILES_URL);
-
-        try {
-            // Fazendo a requisição GET e recebendo a resposta como uma string JSON
-            ResponseEntity<String> responseEntity = restTemplate.exchange(builder.toUriString(), HttpMethod.GET, null, String.class);
-            if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                // Extraindo a string JSON do corpo da resposta
-                String json = responseEntity.getBody();
-
-                // Chamando o método para extrair os fileNames do JSON
-                fileNames = extractFileNamesFromJson(json);
-            } else {
-                System.out.println("A requisição não foi bem-sucedida. Status code: " + responseEntity.getStatusCodeValue());
-            }
-
-            return fileNames;
-        } catch (Exception e) {
-            System.err.println("Erro ao obter a lista de pastas: " + e.getMessage());
-            throw new IOException("Erro ao obter a lista de pastas do servidor.");
-        }
-    }
-
-    private ClientActivateJobDTO requestTrainingToMpai(Boolean isComplete) throws RestClientException {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        String json = isComplete ? completeTrainingParams() : expressTrainingParams();
-
-        HttpEntity<String> request = new HttpEntity<>(json, headers);
-
-        ClientActivateJobDTO response = null;
-
-        try {
-            response = restTemplate.postForObject(MPAI_URL + "train", request, ClientActivateJobDTO.class);
-        } catch (RestClientException e) {
-            System.out.println("ERRO: Não foi possível requisitar o serviço do MPAI\n" + e.getMessage());
-            throw new RestClientException("Não conseguimos iniciar o treinamento. Talvez o servidor MPAI esteja fora do ar." + e.getMessage());
-        }
-
-        return response;
-    }
-
-    private void persistEventInDatabase(ClientActivateJobDTO responseMPAI) throws RestClientException {
-        TrainDTO trainDTO = new TrainDTO();
-        String jobID = responseMPAI.getId();
-        trainDTO.setJob_id(jobID);
-        trainDTO.setType(1);
-        try {
-            restTemplate.postForEntity(BRAHMA_URL + "mpaibridge/newevent", trainDTO, Void.class);
-        } catch (RestClientException e) {
-            throw new RestClientException("Erro ao persistir evento no banco de dados. " + e.getMessage());
-        }
-
-    }
-
 }
+

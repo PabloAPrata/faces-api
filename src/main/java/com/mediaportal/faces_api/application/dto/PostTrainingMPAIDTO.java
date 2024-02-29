@@ -1,6 +1,7 @@
 package com.mediaportal.faces_api.application.dto;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class PostTrainingMPAIDTO {
     private String folder;
@@ -8,8 +9,8 @@ public class PostTrainingMPAIDTO {
     private Boolean extract;
     private Boolean data_augmentation;
     private Double test_split;
-    private ArrayList<Float> C;
-    private ArrayList<String> kernel;
+    private List<Float> C;
+    private List<String> kernel;
     private Double threshold_min;
 
     public PostTrainingMPAIDTO(String folder, String model) {
@@ -57,19 +58,19 @@ public class PostTrainingMPAIDTO {
         this.test_split = test_split;
     }
 
-    public ArrayList<Float> getC() {
+    public List<Float> getC() {
         return C;
     }
 
-    public void setC(ArrayList<Float> c) {
+    public void setC(List<Float> c) {
         C = c;
     }
 
-    public ArrayList<String> getKernel() {
+    public List<String> getKernel() {
         return kernel;
     }
 
-    public void setKernel(ArrayList<String> kernel) {
+    public void setKernel(List<String> kernel) {
         this.kernel = kernel;
     }
 
