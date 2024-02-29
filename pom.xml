@@ -48,17 +48,11 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
-        <repository>
-            <id>internal</id>
-            <name>Archiva Managed Internal Repository</name>
-            <url>http://3.231.64.132:8080/repository/internal/</url>
-        </repository>
     </repositories>
 
 
 
     <dependencies>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -67,24 +61,11 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
-
         <dependency>
-            <groupId>com.informix</groupId>
-            <artifactId>ifxjdbc</artifactId>
-            <version>4.1</version>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.9.1</version>
         </dependency>
-
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-jdbc</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.mediaportal</groupId>
-            <artifactId>utils</artifactId>
-            <version>1.2.1</version>
-        </dependency>
-
     </dependencies>
 
     <dependencyManagement>
@@ -97,6 +78,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
         </dependencies>
     </dependencyManagement>
 

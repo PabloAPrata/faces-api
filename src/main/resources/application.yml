@@ -1,8 +1,8 @@
 server:
-  port: 8080
-spring:
-  datasource:
-    url: jdbc:informix-sqli://192.168.15.30:9088/sescsp:INFORMIXSERVER=ol_database
-    username: informix
-    password: I1n2f3o4
-    driver-class-name: com.informix.jdbc.IfxDriver
+  port: 8081
+paths:
+  mpai: http://192.168.15.30:8000/
+  brahma: http://localhost:8094/
+SHARED_FOLDER: C:\Users\Pablo Prata\Desktop\script IA\WORK_FOLDER\
+
+
