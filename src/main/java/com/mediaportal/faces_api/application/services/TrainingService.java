@@ -1,5 +1,6 @@
 package com.mediaportal.faces_api.application.services;
 // DEPOIS DE PRONTO. DEVE SER TROCADA A CHAMADA DA FUNÇÃO getFileNamesFromJson POR getSchemaFilesFromDatabase()
+
 import com.google.gson.Gson;
 import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
@@ -18,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -30,7 +32,7 @@ public class TrainingService {
     private static final String COMPLETE_TRAINING_FOLDER = "CompleteTrainingFolder";
     private static final String EXPRESS_TRAINING_FOLDER = "ExpressTrainingFolder";
     private static final String MPAI_BRIDGE_FILES_URL = "http://localhost:3001/files";
-    //  private final String MPAI_BRIDGE_FILES_URL = BRAHMA_URL + "mpaibridge/files";
+    //  private static final String MPAI_BRIDGE_FILES_URL = BRAHMA_URL + "mpaibridge/files";
 
     @Value("${paths.brahma}")
     private String brahmaUrl;

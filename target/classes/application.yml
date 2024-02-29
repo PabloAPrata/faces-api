@@ -1,8 +1,0 @@
-server:
-  port: 8081
-paths:
-  mpai: http://192.168.15.30:8000/
-  brahma: http://localhost:8094/
-SHARED_FOLDER: C:\Users\Pablo Prata\Desktop\script IA\WORK_FOLDER\
-
-
