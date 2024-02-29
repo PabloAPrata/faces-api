@@ -42,51 +42,42 @@ public class TrainingService {
     @Value("${SHARED_FOLDER}")
     private String WORK_FOLDER;
 
-    private String errorMessage = "Ocorreu um erro ao iniciar o treinamento";
-
     public TrainingService() {
-    }
-
-    private static List<String> extractFileNamesFromJson(String json) {
-        List<String> fileNames = new ArrayList<>();
-        Pattern pattern = Pattern.compile("\"fileName\"\\s*:\\s*\"([^\"]+)\"");
-        Matcher matcher = pattern.matcher(json);
-        while (matcher.find()) {
-            fileNames.add(matcher.group(1));
-        }
-        return fileNames;
     }
 
     public ApiResponseDTO trainingMPAI(Boolean isComplete) {
 
-        try {
-            String trainingFolder = isComplete ? "CompleteTrainingFolder" : "ExpressTrainingFolder";
+        ClientActivateJobDTO responseMPAI = null;
+        String trainingFolder = isComplete ? "CompleteTrainingFolder" : "ExpressTrainingFolder";
 
+        try {
             generateTrainingFolder(trainingFolder);
-
-            ClientActivateJobDTO responseMPAI = requestTrainingToMpai(isComplete);
-
-            persistEventInDatabase(responseMPAI);
-
-            return new ApiResponseDTO(201, responseMPAI, "O treinamento foi iniciado com sucesso!");
-
-        } catch (Exception e) {
-            return new ApiResponseDTO(500, null, errorMessage);
-        }
-
-    }
-
-    private void generateTrainingFolder(String nameTrainingFolder) {
-        try {
-            createMainTrainingFolder(nameTrainingFolder);
-            copyFilesToTrainingFolder(nameTrainingFolder);
         } catch (IOException e) {
-            errorMessage = "Erro ao criar a pasta de treinamento: " + e.getMessage();
-            throw new RuntimeException("Erro ao criar a pasta de treinamento: " + e.getMessage(), e);
+            return new ApiResponseDTO(503, null, e.getMessage());
         }
+
+        try {
+            responseMPAI = requestTrainingToMpai(isComplete);
+        } catch (RestClientException re) {
+            return new ApiResponseDTO(503, null, re.getMessage());
+        }
+
+        try {
+            persistEventInDatabase(responseMPAI);
+        } catch (RestClientException re) {
+            return new ApiResponseDTO(503, null, re.getMessage());
+        }
+
+        return new ApiResponseDTO(201, responseMPAI, "O treinamento foi iniciado com sucesso!");
+
     }
 
-    private void createMainTrainingFolder(String nameTrainingFolder) throws IOException {
+    private void generateTrainingFolder(String nameTrainingFolder) throws IOException {
+        createMainTrainingFolder(nameTrainingFolder);
+        copyFilesToTrainingFolder(nameTrainingFolder);
+    }
+
+    private void createMainTrainingFolder(String nameTrainingFolder) {
         createFolder(WORK_FOLDER, nameTrainingFolder);
     }
 
@@ -98,11 +89,14 @@ public class TrainingService {
             createFolder(WORK_FOLDER + nameTrainingFolder, nameFolder);
             Path origin = Paths.get(WORK_FOLDER + TRAIN_MPAI_FOLDER + "/" + nameFolder, nameFile);
             Path destiny = Paths.get(WORK_FOLDER + nameTrainingFolder, nameFolder);
+
             try {
                 Files.copy(origin, destiny.resolve(nameFile));
             } catch (IOException e) {
-                System.out.println("\nNão foi possível copiar o arquivo. " + e.getMessage() + "\nERRO: " + e.toString());
+                System.out.println("Não foi possível copiar o arquivo: " + e.getMessage());
             }
+
+
         }
     }
 
@@ -143,9 +137,8 @@ public class TrainingService {
                 return Collections.emptyList();
             }
         } catch (RestClientException e) {
-            errorMessage = "Erro ao obter a lista de pastas: " + e.getMessage();
             System.err.println("Erro ao obter a lista de pastas: " + e.getMessage());
-            return Collections.emptyList();
+            throw new RestClientException("Erro ao obter a lista de pastas e arquivos.");
         }
     }
 
@@ -160,8 +153,16 @@ public class TrainingService {
             System.out.println("Erro ao criar a pasta: " + directory + nameFolder);
         }
     }
-
-    private List<String> getFileNamesFromJson() {
+    private static List<String> extractFileNamesFromJson(String json) {
+        List<String> fileNames = new ArrayList<>();
+        Pattern pattern = Pattern.compile("\"fileName\"\\s*:\\s*\"([^\"]+)\"");
+        Matcher matcher = pattern.matcher(json);
+        while (matcher.find()) {
+            fileNames.add(matcher.group(1));
+        }
+        return fileNames;
+    }
+    private List<String> getFileNamesFromJson() throws IOException {
         RestTemplate restTemplate = new RestTemplate();
         List<String> fileNames = new ArrayList<>();
 
@@ -179,18 +180,16 @@ public class TrainingService {
                 fileNames = extractFileNamesFromJson(json);
             } else {
                 System.out.println("A requisição não foi bem-sucedida. Status code: " + responseEntity.getStatusCodeValue());
-
             }
 
             return fileNames;
         } catch (Exception e) {
-            errorMessage = "Erro ao obter a lista de pastas do servidor";
             System.err.println("Erro ao obter a lista de pastas: " + e.getMessage());
-            return null;
+            throw new IOException("Erro ao obter a lista de pastas do servidor.");
         }
     }
 
-    private ClientActivateJobDTO requestTrainingToMpai(Boolean isComplete) {
+    private ClientActivateJobDTO requestTrainingToMpai(Boolean isComplete) throws RestClientException {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -202,24 +201,23 @@ public class TrainingService {
 
         try {
             response = restTemplate.postForObject(MPAI_URL + "train", request, ClientActivateJobDTO.class);
-        } catch (Exception e) {
-            errorMessage = "Não conseguimos iniciar o treinamento. Talvez o servidor MPAI esteja fora do ar.";
+        } catch (RestClientException e) {
             System.out.println("ERRO: Não foi possível requisitar o serviço do MPAI\n" + e.getMessage());
+            throw new RestClientException("Não conseguimos iniciar o treinamento. Talvez o servidor MPAI esteja fora do ar." + e.getMessage());
         }
-
 
         return response;
     }
 
-    private void persistEventInDatabase(ClientActivateJobDTO responseMPAI) {
+    private void persistEventInDatabase(ClientActivateJobDTO responseMPAI) throws RestClientException {
         TrainDTO trainDTO = new TrainDTO();
         String jobID = responseMPAI.getId();
         trainDTO.setJob_id(jobID);
         trainDTO.setType(1);
         try {
             restTemplate.postForEntity(BRAHMA_URL + "mpaibridge/newevent", trainDTO, Void.class);
-        } catch(Exception e) {
-            errorMessage = "Erro ao gravar o evento no banco de dados!" + e.getMessage();
+        } catch (RestClientException e) {
+            throw new RestClientException("Erro ao persistir evento no banco de dados. " + e.getMessage());
         }
 
     }
