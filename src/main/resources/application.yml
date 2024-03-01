@@ -1,8 +1,11 @@
 server:
   port: 8081
+
 paths:
   mpai: http://192.168.15.30:8000/
   brahma: http://localhost:8094/
+
 SHARED_FOLDER: C:\Users\Pablo Prata\Desktop\script IA\WORK_FOLDER\
-
-
+MAIN_FILES_FOLDER: QUALIFICADOS
+COMPLETE_TRAINING_FOLDER: CompleteTrainingFolder
+EXPRESS_TRAINING_FOLDER: ExpressTrainingFolder
