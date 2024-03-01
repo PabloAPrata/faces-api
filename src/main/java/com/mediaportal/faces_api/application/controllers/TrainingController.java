@@ -1,7 +1,7 @@
 package com.mediaportal.faces_api.application.controllers;
 
 import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
-import com.mediaportal.faces_api.application.services.TrainingService;
+import com.mediaportal.faces_api.application.services.TrainingServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,10 +10,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/training")
 public class TrainingController {
 
-    private final TrainingService trainingService;
+    private final TrainingServiceInterface trainingService;
 
     @Autowired
-    public TrainingController(TrainingService trainingService) {
+    public TrainingController(TrainingServiceInterface trainingService) {
         this.trainingService = trainingService;
     }
 

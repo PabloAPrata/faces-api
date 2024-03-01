@@ -26,7 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-public class TrainingService {
+public class TrainingService implements TrainingServiceInterface {
 
     private static final String TRAIN_MPAI_FOLDER = "QUALIFICADOS";
     private static final String COMPLETE_TRAINING_FOLDER = "CompleteTrainingFolder";
@@ -63,16 +63,16 @@ public class TrainingService {
         }
     }
 
-    private void generateTrainingFolder(String nameTrainingFolder) throws IOException {
+    public void generateTrainingFolder(String nameTrainingFolder) throws IOException {
         createMainTrainingFolder(nameTrainingFolder);
         copyFilesToTrainingFolder(nameTrainingFolder);
     }
 
-    private void createMainTrainingFolder(String nameTrainingFolder) {
+    public void createMainTrainingFolder(String nameTrainingFolder) {
         createFolder(workFolder, nameTrainingFolder);
     }
 
-    private void copyFilesToTrainingFolder(String nameTrainingFolder) throws IOException {
+    public void copyFilesToTrainingFolder(String nameTrainingFolder) throws IOException {
         List<String> fileNames = getFileNamesFromJson();
         for (String nameFolderPlusNameFile : fileNames) {
             String nameFolder = nameFolderPlusNameFile.split("/")[0];
@@ -85,7 +85,7 @@ public class TrainingService {
         }
     }
 
-    private List<String> getFileNamesFromJson() throws IOException {
+    public List<String> getFileNamesFromJson() throws IOException {
         RestTemplate restTemplate = new RestTemplate();
         List<String> fileNames = new ArrayList<>();
 
@@ -122,7 +122,7 @@ public class TrainingService {
         return fileNames;
     }
 
-    private ClientActivateJobDTO requestTrainingToMpai(Boolean isComplete) throws RestClientException {
+    public ClientActivateJobDTO requestTrainingToMpai(Boolean isComplete) throws RestClientException {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -134,7 +134,7 @@ public class TrainingService {
         return restTemplate.postForObject(mpaiUrl + "train", request, ClientActivateJobDTO.class);
     }
 
-    private void persistEventInDatabase(ClientActivateJobDTO responseMPAI) {
+    public void persistEventInDatabase(ClientActivateJobDTO responseMPAI) {
         TrainDTO trainDTO = new TrainDTO();
         trainDTO.setJob_id(responseMPAI.getId());
         trainDTO.setType(1);
@@ -142,14 +142,14 @@ public class TrainingService {
         restTemplate.postForEntity(brahmaUrl + "mpaibridge/newevent", trainDTO, Void.class);
     }
 
-    private void createFolder(String directory, String nameFolder) {
+    public void createFolder(String directory, String nameFolder) {
         File newFolder = new File(directory, nameFolder);
         if (!newFolder.exists() && !newFolder.mkdirs()) {
             System.out.println("Failed to create directory: " + directory + nameFolder);
         }
     }
 
-    private String completeTrainingParams() {
+    public String completeTrainingParams() {
         PostTrainingMPAIDTO postTrainingMPAIDTO = new PostTrainingMPAIDTO(TRAIN_MPAI_FOLDER, "mpCompleteModel.pkl");
 
         postTrainingMPAIDTO.setExtract(false);
@@ -162,7 +162,7 @@ public class TrainingService {
         return gson.toJson(postTrainingMPAIDTO);
     }
 
-    private String expressTrainingParams() {
+    public String expressTrainingParams() {
         PostTrainingMPAIDTO postTrainingMPAIDTO = new PostTrainingMPAIDTO(TRAIN_MPAI_FOLDER, "mpExpressModel.pkl");
 
         postTrainingMPAIDTO.setExtract(false);
@@ -175,7 +175,7 @@ public class TrainingService {
         return gson.toJson(postTrainingMPAIDTO);
     }
 
-    private List<String> getSchemaFilesFromDatabase() {
+    public List<String> getSchemaFilesFromDatabase() {
         try {
             ResponseEntity<String[]> response = restTemplate.exchange(MPAI_BRIDGE_FILES_URL, HttpMethod.GET, null, String[].class);
             String[] data = response.getBody();
