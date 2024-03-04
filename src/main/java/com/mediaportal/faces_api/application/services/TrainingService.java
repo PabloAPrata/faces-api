@@ -13,13 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 
 @Service
 public class TrainingService implements TrainingServiceInterface {
@@ -53,34 +48,13 @@ public class TrainingService implements TrainingServiceInterface {
     public ApiResponseDTO initiateTraining(Boolean isComplete) {
         try {
             String trainingFolder = isComplete ? completeTrainingFolder : expressTrainingFolder;
-            generateTrainingFolder(trainingFolder);
+            apiUtils.generateAuxiliaryFolder(trainingFolder, false);
             ClientActivateJobDTO responseMPAI = requestTrainingToMpai(isComplete);
-            apiUtils.persistEventInDatabase(responseMPAI);
+            int type = isComplete ? 2 : 1;
+            apiUtils.persistEventInDatabase(responseMPAI, type);
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Training initiated successfully!");
         } catch (IOException | RestClientException e) {
             return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
-        }
-    }
-
-    public void generateTrainingFolder(String nameTrainingFolder) throws IOException {
-        createMainTrainingFolder(nameTrainingFolder);
-        copyFilesToTrainingFolder(nameTrainingFolder);
-    }
-
-    public void createMainTrainingFolder(String nameTrainingFolder) {
-        apiUtils.createFolder(workFolder, nameTrainingFolder);
-    }
-
-    public void copyFilesToTrainingFolder(String nameTrainingFolder) throws IOException {
-        List<String> fileNames = apiUtils.getFileNamesFromJson();
-        for (String nameFolderPlusNameFile : fileNames) {
-            String nameFolder = nameFolderPlusNameFile.split("/")[0];
-            String nameFile = nameFolderPlusNameFile.split("/")[1];
-            apiUtils.createFolder(workFolder + nameTrainingFolder, nameFolder);
-            Path origin = Paths.get(workFolder + completeTrainingFolder + "/" + nameFolder, nameFile);
-            Path destination = Paths.get(workFolder + nameTrainingFolder, nameFolder);
-
-            Files.copy(origin, destination.resolve(nameFile), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
@@ -90,8 +64,6 @@ public class TrainingService implements TrainingServiceInterface {
 
         String json = isComplete ? completeTrainingParams() : expressTrainingParams();
         HttpEntity<String> request = new HttpEntity<>(json, headers);
-
-        System.out.println(request);
 
         return restTemplate.postForObject(mpaiUrl + "train", request, ClientActivateJobDTO.class);
     }

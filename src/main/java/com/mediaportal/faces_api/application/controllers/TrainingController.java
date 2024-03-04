@@ -19,7 +19,7 @@ public class TrainingController {
 
     @PostMapping("/express")
     public ResponseEntity<ApiResponseDTO> expressTraining() {
-        ApiResponseDTO response = trainingService.initiateTraining(true);
+        ApiResponseDTO response = trainingService.initiateTraining(false);
         return ResponseEntity.status(response.getStatus()).body(response);
     }
 

@@ -1,6 +1,7 @@
 package com.mediaportal.faces_api.application.controllers;
 
 import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
+import com.mediaportal.faces_api.application.services.GroupService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,11 +10,15 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/classify")
 public class ClassifyController {
 
+    private final GroupService classifyService;
+
+    @Autowired
+    public ClassifyController(GroupService classifyService) {this. classifyService = classifyService;}
+
     @PostMapping("/group")
-    public ResponseEntity<String> agroupUnknownFolder() {
-//        ApiResponseDTO response = trainingService.initiateTraining(true);
-//        return ResponseEntity.status(response.getStatus()).body(response);
-        return ResponseEntity.status(200).body("Olá");
+    public ResponseEntity<ApiResponseDTO> agroupUnknownFolder() {
+        ApiResponseDTO response = classifyService.initiateClassification();
+        return ResponseEntity.status(response.getStatus()).body(response);
     }
 
     @PostMapping("/recognition")

@@ -4,11 +4,16 @@ import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
 import com.mediaportal.faces_api.application.dto.TrainDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,13 +21,20 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ApiUtils {
+@Service
+public class ApiUtils implements ApiUtilsInterface {
 
-    private static final String MPAI_BRIDGE_FILES_URL = "http://localhost:3001/files";
+    private static final String MPAI_BRIDGE_FILES_URL = "http://localhost:3001/";
     //  private static final String MPAI_BRIDGE_FILES_URL = BRAHMA_URL + "mpaibridge/files";
 
     @Value("${paths.brahma}")
     private String brahmaUrl;
+
+    @Value("${SHARED_FOLDER}")
+    private String workFolder;
+
+    @Value("${MAIN_FILES_FOLDER}")
+    private String mainQualifyFolder;
 
     private final RestTemplate restTemplate;
 
@@ -45,13 +57,12 @@ public class ApiUtils {
             throw new RestClientException("Erro ao obter a lista de pastas e arquivos.");
         }
     }
-
-    public List<String> getFileNamesFromJson() throws IOException {
+    public List<String> getFileNamesFromJson(String endpoint) throws IOException {
         RestTemplate restTemplate = new RestTemplate();
         List<String> fileNames = new ArrayList<>();
 
         // Construindo a URL com parâmetros, se necessário
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(MPAI_BRIDGE_FILES_URL);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(MPAI_BRIDGE_FILES_URL + endpoint);
 
         try {
             // Fazendo a requisição GET e recebendo a resposta como uma string JSON
@@ -72,9 +83,9 @@ public class ApiUtils {
             throw new IOException("Erro ao obter a lista de pastas do servidor.");
         }
     }
-
-    private static List<String> extractFileNamesFromJson(String json) {
+    public List<String> extractFileNamesFromJson(String json) {
         List<String> fileNames = new ArrayList<>();
+//        System.out.println(json);
         Pattern pattern = Pattern.compile("\"fileName\"\\s*:\\s*\"([^\"]+)\"");
         Matcher matcher = pattern.matcher(json);
         while (matcher.find()) {
@@ -82,19 +93,47 @@ public class ApiUtils {
         }
         return fileNames;
     }
-
-    public void createFolder(String directory, String nameFolder) {
+    public void createAuxiliaryFolder(String directory, String nameFolder) {
         File newFolder = new File(directory, nameFolder);
         if (!newFolder.exists() && !newFolder.mkdirs()) {
             System.out.println("Failed to create directory: " + directory + nameFolder);
         }
     }
-
-    public void persistEventInDatabase(ClientActivateJobDTO responseMPAI) {
+    public void persistEventInDatabase(ClientActivateJobDTO responseMPAI, int type) throws IOException{
         TrainDTO trainDTO = new TrainDTO();
         trainDTO.setJob_id(responseMPAI.getId());
-        trainDTO.setType(1);
+        trainDTO.setType(type);
 
-        restTemplate.postForEntity(brahmaUrl + "mpaibridge/newevent", trainDTO, Void.class);
+        try {
+            restTemplate.postForEntity(brahmaUrl + "mpaibridge/newevent", trainDTO, Void.class);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            throw new IOException("Erro persistir as informações no banco de dados.");
+        }
+
     }
+    public void generateAuxiliaryFolder(String nameTrainingFolder, Boolean bringUnknown) throws IOException {
+        createAuxiliaryFolder(workFolder, nameTrainingFolder);
+        copyFilesToAuxiliaryFolder(nameTrainingFolder, bringUnknown);
+    }
+    public void copyFilesToAuxiliaryFolder(String nameTrainingFolder, Boolean bringOnlyUnknown) throws IOException {
+        List<String> fileNames = getFileNamesFromJson("files");
+        for (String nameFolderPlusNameFile : fileNames) {
+            String nameFolder = nameFolderPlusNameFile.split("/")[0];
+            String nameFile = nameFolderPlusNameFile.split("/")[1];
+
+            Path origin = Paths.get(workFolder + mainQualifyFolder + "/" + nameFolder, nameFile);
+            Path destination = Paths.get(workFolder + nameTrainingFolder, nameFolder);
+
+            if (bringOnlyUnknown && nameFolder.equals("unknown")) {
+                createAuxiliaryFolder(workFolder + nameTrainingFolder, nameFolder);
+                Files.copy(origin, destination.resolve(nameFile), StandardCopyOption.REPLACE_EXISTING);
+            } else if (!bringOnlyUnknown && !nameFolder.equals("unknown")){
+                createAuxiliaryFolder(workFolder + nameTrainingFolder, nameFolder);
+                Files.copy(origin, destination.resolve(nameFile), StandardCopyOption.REPLACE_EXISTING);
+            }
+
+        }
+    }
+
 }

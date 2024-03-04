@@ -11,17 +11,10 @@ import java.util.List;
 public interface TrainingServiceInterface {
     ApiResponseDTO initiateTraining(Boolean isComplete);
 
-    void generateTrainingFolder(String nameTrainingFolder) throws IOException;
-
-    void createMainTrainingFolder(String nameTrainingFolder);
-
-    void copyFilesToTrainingFolder(String nameTrainingFolder) throws IOException;
-
     ClientActivateJobDTO requestTrainingToMpai(Boolean isComplete) throws RestClientException;
 
     String completeTrainingParams();
 
     String expressTrainingParams();
-
 
 }
