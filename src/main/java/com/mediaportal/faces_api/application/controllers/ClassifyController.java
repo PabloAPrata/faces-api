@@ -26,9 +26,8 @@ public class ClassifyController {
     }
 
     @PostMapping("/recognition")
-    public ResponseEntity<String> fastRecognitionUnknownFolder() {
-//        ApiResponseDTO response = classifyService.initiateClassification();
-//        return ResponseEntity.status(response.getStatus()).body(response);
-        return ResponseEntity.status(200).body("Olá");
+    public ResponseEntity<ApiResponseDTO> fastRecognitionUnknownFolder() {
+        ApiResponseDTO response = classifyService.initiateRecognition();
+        return ResponseEntity.status(response.getStatus()).body(response);
     }
 }
