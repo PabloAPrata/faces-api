@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 public class ApiUtils implements ApiUtilsInterface {
 
     private static final String MPAI_BRIDGE_FILES_URL = "http://localhost:3001/";
-    //  private static final String MPAI_BRIDGE_FILES_URL = BRAHMA_URL + "mpaibridge/files";
+    //  private static final String MPAI_BRIDGE_FILES_URL = BRAHMA_URL + "repository/files";
 
     @Value("${paths.brahma}")
     private String brahmaUrl;
@@ -105,10 +105,10 @@ public class ApiUtils implements ApiUtilsInterface {
         trainDTO.setType(type);
 
         try {
-            restTemplate.postForEntity(brahmaUrl + "mpaibridge/newevent", trainDTO, Void.class);
+            restTemplate.postForEntity(brahmaUrl + "repository/new/event", trainDTO, Void.class);
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            throw new IOException("Erro persistir as informações no banco de dados.");
+            throw new IOException("Erro persistir as informações no banco de dados." + e.toString());
         }
 
     }

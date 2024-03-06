@@ -8,10 +8,14 @@ import com.mediaportal.faces_api.application.dto.PostTrainingMPAIDTO;
 import com.mediaportal.faces_api.application.utils.ApiUtilsInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,26 +23,20 @@ import java.util.Collections;
 @Service
 public class TrainingService implements TrainingServiceInterface {
 
-    @Autowired
-    public ApiUtilsInterface apiUtils;
-
-    @Value("${paths.mpai}")
-    private String mpaiUrl;
-
-    @Value("${SHARED_FOLDER}")
-    private String workFolder;
-
-    @Value("${MAIN_FILES_FOLDER}")
-    private String mainQualifyFolder;
-
-    @Value("${COMPLETE_TRAINING_FOLDER}")
-    private String completeTrainingFolder;
-
-    @Value("${EXPRESS_TRAINING_FOLDER}")
-    private String expressTrainingFolder;
-
     private final RestTemplate restTemplate;
     private final Gson gson;
+    @Autowired
+    public ApiUtilsInterface apiUtils;
+    @Value("${paths.mpai}")
+    private String mpaiUrl;
+    @Value("${SHARED_FOLDER}")
+    private String workFolder;
+    @Value("${MAIN_FILES_FOLDER}")
+    private String mainQualifyFolder;
+    @Value("${COMPLETE_TRAINING_FOLDER}")
+    private String completeTrainingFolder;
+    @Value("${EXPRESS_TRAINING_FOLDER}")
+    private String expressTrainingFolder;
 
     public TrainingService(RestTemplate restTemplate, Gson gson) {
         this.restTemplate = restTemplate;

@@ -4,7 +4,9 @@ import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
 import com.mediaportal.faces_api.application.services.GroupService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/classify")
@@ -13,7 +15,9 @@ public class ClassifyController {
     private final GroupService classifyService;
 
     @Autowired
-    public ClassifyController(GroupService classifyService) {this. classifyService = classifyService;}
+    public ClassifyController(GroupService classifyService) {
+        this.classifyService = classifyService;
+    }
 
     @PostMapping("/group")
     public ResponseEntity<ApiResponseDTO> agroupUnknownFolder() {
@@ -23,7 +27,7 @@ public class ClassifyController {
 
     @PostMapping("/recognition")
     public ResponseEntity<String> fastRecognitionUnknownFolder() {
-//        ApiResponseDTO response = trainingService.initiateTraining(true);
+//        ApiResponseDTO response = classifyService.initiateClassification();
 //        return ResponseEntity.status(response.getStatus()).body(response);
         return ResponseEntity.status(200).body("Olá");
     }
