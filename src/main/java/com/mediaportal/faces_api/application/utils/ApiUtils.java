@@ -24,9 +24,6 @@ import java.util.regex.Pattern;
 @Service
 public class ApiUtils implements ApiUtilsInterface {
 
-    private static final String MPAI_BRIDGE_FILES_URL = "http://localhost:3001/";
-    //  private static final String MPAI_BRIDGE_FILES_URL = BRAHMA_URL + "repository/files";
-
     @Value("${paths.brahma}")
     private String brahmaUrl;
 
@@ -36,6 +33,8 @@ public class ApiUtils implements ApiUtilsInterface {
     @Value("${MAIN_FILES_FOLDER}")
     private String mainQualifyFolder;
 
+        private static final String MPAI_BRIDGE_FILES_URL = "http://192.168.15.20:3001/";
+//    private final String MPAI_BRIDGE_FILES_URL = brahmaUrl + "repository/jobs/latest";
     private final RestTemplate restTemplate;
 
     public ApiUtils(RestTemplate restTemplate) {
@@ -44,6 +43,7 @@ public class ApiUtils implements ApiUtilsInterface {
     public List<String> getSchemaFilesFromDatabase() {
 
         try {
+
             ResponseEntity<String[]> response = restTemplate.exchange(MPAI_BRIDGE_FILES_URL, HttpMethod.GET, null, String[].class);
             String[] data = response.getBody();
 
@@ -61,11 +61,13 @@ public class ApiUtils implements ApiUtilsInterface {
         RestTemplate restTemplate = new RestTemplate();
         List<String> fileNames = new ArrayList<>();
 
+
         // Construindo a URL com parâmetros, se necessário
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(MPAI_BRIDGE_FILES_URL + endpoint);
 
         try {
             // Fazendo a requisição GET e recebendo a resposta como uma string JSON
+            System.out.println("Requisitando JSON de grupos e rostos..");
             ResponseEntity<String> responseEntity = restTemplate.exchange(builder.toUriString(), HttpMethod.GET, null, String.class);
             if (responseEntity.getStatusCode().is2xxSuccessful()) {
                 // Extraindo a string JSON do corpo da resposta
@@ -73,6 +75,7 @@ public class ApiUtils implements ApiUtilsInterface {
 
                 // Chamando o método para extrair os fileNames do JSON
                 fileNames = extractFileNamesFromJson(json);
+                System.out.println("Grupos e rostos pegados com sucesso!");
             } else {
                 System.out.println("A requisição não foi bem-sucedida. Status code: " + responseEntity.getStatusCodeValue());
             }
@@ -105,6 +108,7 @@ public class ApiUtils implements ApiUtilsInterface {
         trainDTO.setType(type);
 
         try {
+            System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + trainDTO.getJob_id() +"Type: "+ trainDTO.getType());
             restTemplate.postForEntity(brahmaUrl + "repository/new/event", trainDTO, Void.class);
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -135,5 +139,8 @@ public class ApiUtils implements ApiUtilsInterface {
 
         }
     }
+
+
+//    public void deleteAuxiliaryFolder(){}
 
 }

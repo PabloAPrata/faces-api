@@ -14,7 +14,7 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <start-class>com.mediaportal.Main</start-class>
+        <start-class>com.mediaportal.faces_api.Main</start-class>
     </properties>
 
     <pluginRepositories>
