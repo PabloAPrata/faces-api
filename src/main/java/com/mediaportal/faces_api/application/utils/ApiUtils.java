@@ -33,7 +33,7 @@ public class ApiUtils implements ApiUtilsInterface {
     @Value("${MAIN_FILES_FOLDER}")
     private String mainQualifyFolder;
 
-        private static final String MPAI_BRIDGE_FILES_URL = "http://192.168.15.20:3001/";
+        private static final String MPAI_BRIDGE_FILES_URL = "http://localhost:3001/";
 //    private final String MPAI_BRIDGE_FILES_URL = brahmaUrl + "repository/jobs/latest";
     private final RestTemplate restTemplate;
 
@@ -97,18 +97,19 @@ public class ApiUtils implements ApiUtilsInterface {
         return fileNames;
     }
     public void createAuxiliaryFolder(String directory, String nameFolder) {
-        File newFolder = new File(directory, nameFolder);
+        File newFolder = new File(directory, "/" + nameFolder);
         if (!newFolder.exists() && !newFolder.mkdirs()) {
             System.out.println("Failed to create directory: " + directory + nameFolder);
         }
     }
     public void persistEventInDatabase(ClientActivateJobDTO responseMPAI, int type) throws IOException{
         TrainDTO trainDTO = new TrainDTO();
-        trainDTO.setJob_id(responseMPAI.getId());
+        trainDTO.setJobId(responseMPAI.getId());
+
         trainDTO.setType(type);
 
         try {
-            System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + trainDTO.getJob_id() +"Type: "+ trainDTO.getType());
+            System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + trainDTO.getJobId() +" Type: "+ trainDTO.getType());
             restTemplate.postForEntity(brahmaUrl + "repository/new/event", trainDTO, Void.class);
         } catch (Exception e) {
             System.out.println(e.getMessage());

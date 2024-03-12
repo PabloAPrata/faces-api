@@ -61,6 +61,8 @@ public class GroupService {
 
             ClientActivateJobDTO responseMPAI = requestGroupsToMpai();
 
+            System.out.println("Tudo certo até aqui!");
+
             apiUtils.persistEventInDatabase(responseMPAI, 3);
 
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Cluster started successfully");

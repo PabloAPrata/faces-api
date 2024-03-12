@@ -52,7 +52,7 @@ public class TrainingService implements TrainingServiceInterface {
             apiUtils.persistEventInDatabase(responseMPAI, type);
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Training initiated successfully!");
         } catch (IOException | RestClientException e) {
-            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
+            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.toString());
         }
     }
 
