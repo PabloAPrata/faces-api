@@ -6,6 +6,7 @@ import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
 import com.mediaportal.faces_api.application.dto.PostTrainingMPAIDTO;
 import com.mediaportal.faces_api.application.utils.ApiUtilsInterface;
+import com.mediaportal.faces_api.application.utils.LoopRequests;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -25,6 +26,8 @@ public class TrainingService implements TrainingServiceInterface {
 
     private final RestTemplate restTemplate;
     private final Gson gson;
+
+    private final StatusServiceInterface statusService;
     @Autowired
     public ApiUtilsInterface apiUtils;
     @Value("${paths.mpai}")
@@ -38,9 +41,10 @@ public class TrainingService implements TrainingServiceInterface {
     @Value("${EXPRESS_TRAINING_FOLDER}")
     private String expressTrainingFolder;
 
-    public TrainingService(RestTemplate restTemplate, Gson gson) {
+    public TrainingService(RestTemplate restTemplate, Gson gson, StatusServiceInterface statusService) {
         this.restTemplate = restTemplate;
         this.gson = gson;
+        this.statusService = statusService;
     }
 
     public ApiResponseDTO initiateTraining(Boolean isComplete) {
@@ -48,6 +52,11 @@ public class TrainingService implements TrainingServiceInterface {
             String trainingFolder = isComplete ? completeTrainingFolder : expressTrainingFolder;
             apiUtils.generateAuxiliaryFolder(trainingFolder, false);
             ClientActivateJobDTO responseMPAI = requestTrainingToMpai(isComplete);
+
+            // Iniciar uma nova thread até que o treinamento termine
+            Thread threadRequests = new Thread(new LoopRequests(responseMPAI.getId()));
+            threadRequests.start();
+
             int type = isComplete ? 2 : 1;
             apiUtils.persistEventInDatabase(responseMPAI, type);
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Training initiated successfully!");
