@@ -26,10 +26,10 @@ public class TrainingService implements TrainingServiceInterface {
 
     private final RestTemplate restTemplate;
     private final Gson gson;
-
-    private final StatusServiceInterface statusService;
     @Autowired
     public ApiUtilsInterface apiUtils;
+    @Autowired
+    private LoopRequests loopRequests;
     @Value("${paths.mpai}")
     private String mpaiUrl;
     @Value("${SHARED_FOLDER}")
@@ -41,10 +41,9 @@ public class TrainingService implements TrainingServiceInterface {
     @Value("${EXPRESS_TRAINING_FOLDER}")
     private String expressTrainingFolder;
 
-    public TrainingService(RestTemplate restTemplate, Gson gson, StatusServiceInterface statusService) {
+    public TrainingService(RestTemplate restTemplate, Gson gson) {
         this.restTemplate = restTemplate;
         this.gson = gson;
-        this.statusService = statusService;
     }
 
     public ApiResponseDTO initiateTraining(Boolean isComplete) {
@@ -53,9 +52,9 @@ public class TrainingService implements TrainingServiceInterface {
             apiUtils.generateAuxiliaryFolder(trainingFolder, false);
             ClientActivateJobDTO responseMPAI = requestTrainingToMpai(isComplete);
 
-            // Iniciar uma nova thread até que o treinamento termine
-            Thread threadRequests = new Thread(new LoopRequests(responseMPAI.getId()));
-            threadRequests.start();
+            String jobId = responseMPAI.getId();
+
+            loopRequests.startLoop(jobId);
 
             int type = isComplete ? 2 : 1;
             apiUtils.persistEventInDatabase(responseMPAI, type);
