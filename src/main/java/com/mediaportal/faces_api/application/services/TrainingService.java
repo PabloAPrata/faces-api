@@ -51,12 +51,12 @@ public class TrainingService implements TrainingServiceInterface {
             String trainingFolder = isComplete ? completeTrainingFolder : expressTrainingFolder;
             apiUtils.generateAuxiliaryFolder(trainingFolder, false);
             ClientActivateJobDTO responseMPAI = requestTrainingToMpai(isComplete);
+            int type = isComplete ? 2 : 1;
 
             String jobId = responseMPAI.getId();
 
-            loopRequests.startLoop(jobId);
+            loopRequests.startLoop(jobId, type);
 
-            int type = isComplete ? 2 : 1;
             apiUtils.persistEventInDatabase(responseMPAI, type);
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Training initiated successfully!");
         } catch (IOException | RestClientException e) {

@@ -2,6 +2,7 @@ package com.mediaportal.faces_api.application.utils;
 
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
 import com.mediaportal.faces_api.application.dto.TrainDTO;
+import com.mediaportal.faces_api.application.dto.UpdateEventDTO;
 import com.mediaportal.faces_api.application.services.StatusServiceInterface;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
@@ -38,9 +39,46 @@ public class ApiUtils implements ApiUtilsInterface {
     @Value("${MAIN_FILES_FOLDER}")
     private String mainQualifyFolder;
 
+    @Value("${COMPLETE_TRAINING_FOLDER}")
+    private String completeTrainingFolder;
+
+    @Value("${EXPRESS_TRAINING_FOLDER}")
+    private String expressTrainingFolder;
+
+    @Value("${GROUP_NAME_FOLDER}")
+    private String groupNameFolder;
+
+    @Value("${RECOGNITION_NAME_FOLDER}")
+    private String recognitionNameFolder;
+
     public ApiUtils(RestTemplate restTemplate, StatusServiceInterface statusService) {
         this.restTemplate = restTemplate;
         this.statusService = statusService;
+    }
+
+    public static boolean deleteFolder(File folder) {
+        if (folder.isDirectory()) {
+            File[] files = folder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    // Se for um arquivo, deleta
+                    if (file.isFile()) {
+                        if (!file.delete()) {
+                            return false;
+                        }
+                    }
+                    // Se for uma pasta, chama recursivamente para deletar
+                    else if (file.isDirectory()) {
+                        if (!deleteFolder(file)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Deleta a própria pasta após deletar todo o seu conteúdo
+        return folder.delete();
     }
 
     public List<String> getSchemaFilesFromDatabase() {
@@ -117,7 +155,7 @@ public class ApiUtils implements ApiUtilsInterface {
 
         try {
             System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + trainDTO.getJobId() + " Type: " + trainDTO.getType());
-            restTemplate.postForEntity(brahmaUrl + "repository/new/event", trainDTO, Void.class);
+            restTemplate.postForEntity(brahmaUrl + "repository/event/new", trainDTO, Void.class);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             throw new IOException("Erro persistir as informações no banco de dados." + e.toString());
@@ -150,5 +188,70 @@ public class ApiUtils implements ApiUtilsInterface {
         }
     }
 
+    public void changeDatabaseStatus(String jobId, int status) throws RestClientException {
+
+        try {
+            UpdateEventDTO updateEventDTO = new UpdateEventDTO(jobId, status);
+
+            System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + updateEventDTO.getJobId() + " Status: " + updateEventDTO.getStatus());
+            restTemplate.postForEntity(brahmaUrl + "repository/event/update", updateEventDTO, Void.class);
+        } catch (RestClientException e) {
+            System.out.println(e.getMessage());
+            throw new RestClientException("Erro persistir as informações no banco de dados." + e.toString());
+        }
+    }
+
+    // Fazer posteriormente com que este método busque tais informações no banco de dados e guarde em memória.
+    // Isso facilitará a manutenção do código e evita o custo de pesquisar no banco toda vez que a função for chamada.
+    public int getStatusNumberByName(String statusName) {
+        switch (statusName) {
+            case "queued":
+                return 1;
+            case "starting":
+                return 2;
+            case "running":
+                return 3;
+            case "done":
+                return 4;
+            case "error":
+                return 5;
+            default:
+                return 0;
+        }
+    }
+
+    public void deleteAuxiliaryFolder(int jobType) {
+
+        String folderPath;
+
+        switch (jobType) {
+            case 1:
+                folderPath = workFolder + expressTrainingFolder;
+            case 2:
+                folderPath = workFolder + completeTrainingFolder;
+            case 3:
+                folderPath = workFolder + groupNameFolder;
+            case 4:
+                folderPath = workFolder + recognitionNameFolder;
+            default:
+                folderPath = "";
+        }
+
+        File folder = new File(folderPath);
+
+        if (folder.isDirectory() && folder.exists()) {
+            boolean success = deleteFolder(folder);
+            if (success) {
+                System.out.println("Pasta deletada com sucesso!");
+            } else {
+                System.out.println("Falha ao deletar a pasta.");
+            }
+        } else {
+            System.out.println("A pasta não existe ou não é uma pasta válida.");
+        }
+    }
 
 }
+
+
+

@@ -1,6 +1,7 @@
 package com.mediaportal.faces_api.application.utils;
 
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
+import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
 import java.util.List;
@@ -20,4 +21,10 @@ public interface ApiUtilsInterface {
     List<String> extractFileNamesFromJson(String json);
 
     List<String> getSchemaFilesFromDatabase();
+
+    void changeDatabaseStatus(String jobId, int status) throws RestClientException;
+
+    int getStatusNumberByName(String statusName);
+
+    void deleteAuxiliaryFolder(int jobType);
 }

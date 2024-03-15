@@ -1,6 +1,6 @@
 package com.mediaportal.faces_api.application.services;
 
-import com.google.gson.Gson;
+import com.google.gson.*;
 import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
 import com.mediaportal.faces_api.application.dto.PostGroupDTO;
@@ -15,6 +15,16 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import java.io.FileReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import com.google.gson.Gson;
+
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import java.io.IOException;
 
@@ -103,4 +113,28 @@ public class GroupService {
         return gson.toJson(postRecognizeDTO);
     }
 
+    public static void readGroupJSON() {
+        try {
+
+            JsonObject jsonObject = JsonParser.parseReader(new FileReader("C:\\Users\\pablo\\Desktop\\script IA\\WORK_FOLDER\\Agrupamento\\group.json")).getAsJsonObject();
+            JsonObject groupsObject = jsonObject.getAsJsonObject("groups");
+            List<String> insertList = new ArrayList<>();
+
+            for (Map.Entry<String, JsonElement> entry : groupsObject.entrySet()) {
+                for (Object item : (JsonArray) entry.getValue()) {
+                    insertList.add(entry.getKey() + "/" + extractFileName(item.toString()));
+                }
+            }
+
+            System.out.println(insertList);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static String extractFileName(String originalString){
+        Path path = Paths.get(originalString.replace("\"", ""));
+
+        return path.getFileName().toString();
+    }
 }
