@@ -1,7 +1,7 @@
 package com.mediaportal.faces_api.application.controllers;
 
 import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
-import com.mediaportal.faces_api.application.services.GroupService;
+import com.mediaportal.faces_api.application.services.ClassifyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/classify")
 public class ClassifyController {
 
-    private final GroupService classifyService;
+    private final ClassifyService classifyService;
 
     @Autowired
-    public ClassifyController(GroupService classifyService) {
+    public ClassifyController(ClassifyService classifyService) {
         this.classifyService = classifyService;
     }
 

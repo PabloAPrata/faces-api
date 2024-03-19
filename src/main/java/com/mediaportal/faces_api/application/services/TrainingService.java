@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 @Service
@@ -51,6 +52,7 @@ public class TrainingService implements TrainingServiceInterface {
             String trainingFolder = isComplete ? completeTrainingFolder : expressTrainingFolder;
             apiUtils.generateAuxiliaryFolder(trainingFolder, false);
             ClientActivateJobDTO responseMPAI = requestTrainingToMpai(isComplete);
+
             int type = isComplete ? 2 : 1;
 
             String jobId = responseMPAI.getId();
@@ -78,9 +80,9 @@ public class TrainingService implements TrainingServiceInterface {
         PostTrainingMPAIDTO postTrainingMPAIDTO = new PostTrainingMPAIDTO(mainQualifyFolder, "mpCompleteModel.pkl");
 
         postTrainingMPAIDTO.setExtract(false);
-        postTrainingMPAIDTO.setData_augmentation(false);
+        postTrainingMPAIDTO.setData_augmentation(true);
         postTrainingMPAIDTO.setTest_split(0.2);
-        postTrainingMPAIDTO.setC(new ArrayList<>(Collections.singletonList(0.0003f)));
+        postTrainingMPAIDTO.setC(Arrays.asList(0.0003f, 0.00035f, 0.0004f, 0.00045f, 0.0005f));
         postTrainingMPAIDTO.setKernel(new ArrayList<>(Collections.singletonList("linear")));
         postTrainingMPAIDTO.setThreshold_min(0.4);
 

@@ -64,6 +64,7 @@ public class ApiUtils implements ApiUtilsInterface {
                     // Se for um arquivo, deleta
                     if (file.isFile()) {
                         if (!file.delete()) {
+                            System.out.println("Falha ao deletar: " + file);
                             return false;
                         }
                     }
@@ -194,7 +195,8 @@ public class ApiUtils implements ApiUtilsInterface {
             UpdateEventDTO updateEventDTO = new UpdateEventDTO(jobId, status);
 
             System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + updateEventDTO.getJobId() + " Status: " + updateEventDTO.getStatus());
-            restTemplate.postForEntity(brahmaUrl + "repository/event/update", updateEventDTO, Void.class);
+
+            restTemplate.put(brahmaUrl + "repository/event/update", updateEventDTO, Void.class);
         } catch (RestClientException e) {
             System.out.println(e.getMessage());
             throw new RestClientException("Erro persistir as informações no banco de dados." + e.toString());
@@ -222,29 +224,34 @@ public class ApiUtils implements ApiUtilsInterface {
 
     public void deleteAuxiliaryFolder(int jobType) {
 
-        String folderPath;
+        String folderPath = "";
+
+        System.out.println(jobType);
 
         switch (jobType) {
             case 1:
                 folderPath = workFolder + expressTrainingFolder;
+                break;
             case 2:
                 folderPath = workFolder + completeTrainingFolder;
+                break;
             case 3:
                 folderPath = workFolder + groupNameFolder;
+                break;
             case 4:
                 folderPath = workFolder + recognitionNameFolder;
-            default:
-                folderPath = "";
+                break;
         }
 
         File folder = new File(folderPath);
+
 
         if (folder.isDirectory() && folder.exists()) {
             boolean success = deleteFolder(folder);
             if (success) {
                 System.out.println("Pasta deletada com sucesso!");
             } else {
-                System.out.println("Falha ao deletar a pasta.");
+                System.out.println("Nem todos os arquivos foram deletados.");
             }
         } else {
             System.out.println("A pasta não existe ou não é uma pasta válida.");

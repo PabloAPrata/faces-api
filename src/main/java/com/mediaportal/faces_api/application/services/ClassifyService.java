@@ -1,11 +1,10 @@
 package com.mediaportal.faces_api.application.services;
 
 import com.google.gson.*;
-import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
-import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
-import com.mediaportal.faces_api.application.dto.PostGroupDTO;
-import com.mediaportal.faces_api.application.dto.PostRecognizeDTO;
+import com.google.gson.reflect.TypeToken;
+import com.mediaportal.faces_api.application.dto.*;
 import com.mediaportal.faces_api.application.utils.ApiUtilsInterface;
+import com.mediaportal.faces_api.application.utils.LoopRequests;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -15,26 +14,27 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
 import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import com.google.gson.Gson;
-
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import java.io.IOException;
-
 @Service
-public class GroupService {
+public class ClassifyService {
 
     private final RestTemplate restTemplate;
     private final Gson gson;
     @Autowired
     public ApiUtilsInterface apiUtils;
+    @Value("${paths.brahma}")
+    private String brahmaUrl;
+    @Autowired
+    private LoopRequests loopRequests;
     @Value("${paths.mpai}")
     private String mpaiUrl;
     @Value("${SHARED_FOLDER}")
@@ -46,15 +46,30 @@ public class GroupService {
     @Value("${RECOGNITION_NAME_FOLDER}")
     private String RECOGNITION_NAME_FOLDER;
 
-    public GroupService(RestTemplate restTemplate, Gson gson) {
+    public ClassifyService(RestTemplate restTemplate, Gson gson) {
         this.restTemplate = restTemplate;
         this.gson = gson;
     }
 
-    public ApiResponseDTO initiateRecognition(){
+    private static String extractFileName(String originalString) {
+        Path path = Paths.get(originalString.replace("\"", ""));
+        return path.getFileName().toString();
+    }
+
+    public void setBrahmaUrl(String brahmaUrl) {
+        this.brahmaUrl = brahmaUrl;
+    }
+
+    public ApiResponseDTO initiateRecognition() {
         try {
             apiUtils.generateAuxiliaryFolder(RECOGNITION_NAME_FOLDER, true);
+
             ClientActivateJobDTO responseMPAI = requestRecognizeToMpai();
+
+            String jobId = responseMPAI.getId();
+
+            loopRequests.startLoop(jobId, 4);
+
             apiUtils.persistEventInDatabase(responseMPAI, 4);
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Recognition started successfully");
 
@@ -71,7 +86,9 @@ public class GroupService {
 
             ClientActivateJobDTO responseMPAI = requestGroupsToMpai();
 
-            System.out.println("Tudo certo até aqui!");
+            String jobId = responseMPAI.getId();
+
+            loopRequests.startLoop(jobId, 3);
 
             apiUtils.persistEventInDatabase(responseMPAI, 3);
 
@@ -113,28 +130,62 @@ public class GroupService {
         return gson.toJson(postRecognizeDTO);
     }
 
-    public static void readGroupJSON() {
+    public void readGroupJSON() {
         try {
 
-            JsonObject jsonObject = JsonParser.parseReader(new FileReader("C:\\Users\\pablo\\Desktop\\script IA\\WORK_FOLDER\\Agrupamento\\group.json")).getAsJsonObject();
+            JsonObject jsonObject = JsonParser.parseReader(new FileReader(workFolder + GROUP_NAME_FOLDER + "/" + "unknown.json")).getAsJsonObject();
             JsonObject groupsObject = jsonObject.getAsJsonObject("groups");
-            List<String> insertList = new ArrayList<>();
+            List<String> groupsList = new ArrayList<>();
 
             for (Map.Entry<String, JsonElement> entry : groupsObject.entrySet()) {
                 for (Object item : (JsonArray) entry.getValue()) {
-                    insertList.add(entry.getKey() + "/" + extractFileName(item.toString()));
+                    groupsList.add(entry.getKey() + "/" + extractFileName(item.toString()));
                 }
             }
 
-            System.out.println(insertList);
+            requestInsertGroup(groupsList);
+
+            apiUtils.deleteAuxiliaryFolder(3);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static String extractFileName(String originalString){
-        Path path = Paths.get(originalString.replace("\"", ""));
-
-        return path.getFileName().toString();
+    private void requestInsertGroup(List<String> groupsList) {
+        try {
+            restTemplate.put(brahmaUrl + "repository/data/group/update", groupsList, Void.class);
+        } catch (RestClientException e) {
+            System.out.println(e.getMessage());
+            throw new RestClientException("Erro persistir as informações no banco de dados." + e.toString());
+        }
     }
+
+    public void readRecognizeJSON() {
+        String arquivoJSON = workFolder + RECOGNITION_NAME_FOLDER + "/" + "unknown.json";
+
+        List<String> listaFiles = new ArrayList<>();
+
+        try {
+
+            Gson gson = new Gson();
+
+            FileReader fileReader = new FileReader(arquivoJSON);
+            Type listaTipo = new TypeToken<List<RecognizeJsonDTO>>() {
+            }.getType();
+            List<RecognizeJsonDTO> listaArquivos = gson.fromJson(fileReader, listaTipo);
+
+            for (RecognizeJsonDTO arquivo : listaArquivos) {
+                listaFiles.add(arquivo.getClasse() + "/" + extractFileName(arquivo.getFile()));
+            }
+
+            requestInsertGroup(listaFiles);
+
+            apiUtils.deleteAuxiliaryFolder(4);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
+

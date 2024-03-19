@@ -1,6 +1,7 @@
 package com.mediaportal.faces_api.application.utils;
 
 import com.mediaportal.faces_api.application.dto.StatusMpaiDTO;
+import com.mediaportal.faces_api.application.services.ClassifyService;
 import com.mediaportal.faces_api.application.services.StatusServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,13 +23,16 @@ public class LoopRequests {
     @Autowired
     private StatusServiceInterface statusService;
 
+    @Autowired
+    private ClassifyService classifyService;
+
     public void startLoop(String jobId, int type) {
         new Thread(() -> loopForStatus(jobId, type)).start();
     }
 
     private Boolean isStatusChanged(int previousStatus, int currentStatus) {
         if (previousStatus != currentStatus) {
-            System.out.println("O status mudou de " + previousStatus + "para" + currentStatus);
+            System.out.println("O status mudou de " + previousStatus + " para " + currentStatus);
             return true;
         } else return false;
     }
@@ -45,22 +49,38 @@ public class LoopRequests {
             statusName = response.getStatus();
             currentStatus = apiUtils.getStatusNumberByName(statusName);
 
-            // Verifica se houve mudança de status
             if (isStatusChanged(previousStatus, currentStatus)) apiUtils.changeDatabaseStatus(jobId, currentStatus);
 
             previousStatus = currentStatus;
 
             if (statusName.equals("done")) {
                 isJobFinished = true;
-            }
-            else {
+
+                if (type == 1) {
+                    apiUtils.deleteAuxiliaryFolder(1);
+                    return;
+                }
+                if (type == 2) {
+                    apiUtils.deleteAuxiliaryFolder(2);
+                    return;
+                }
+                if (type == 3) {
+                    classifyService.readGroupJSON();
+                    return;
+                }
+                if (type == 4) {
+                    classifyService.readRecognizeJSON();
+                    return;
+                }
+
+            } else {
                 System.out.println("JOB está: " + statusName);
                 waitOneMinute();
             }
         }
     }
 
-    private void waitOneMinute(){
+    private void waitOneMinute() {
         try {
             TimeUnit.MINUTES.sleep(1);
         } catch (InterruptedException e) {
@@ -68,6 +88,7 @@ public class LoopRequests {
 //            e.printStackTrace();
         }
     }
+
 
 }
 
