@@ -2,12 +2,15 @@ package com.mediaportal.faces_api.application.services;
 // DEPOIS DE PRONTO. DEVE SER TROCADA A CHAMADA DA FUNÇÃO getFileNamesFromJson POR getSchemaFilesFromDatabase()
 
 import com.google.gson.Gson;
+import com.mediaportal.faces_api.Main;
 import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
 import com.mediaportal.faces_api.application.dto.ErrorMpaiDetailsDTO;
 import com.mediaportal.faces_api.application.dto.PostTrainingMPAIDTO;
 import com.mediaportal.faces_api.application.utils.ApiUtilsInterface;
 import com.mediaportal.faces_api.application.utils.LoopRequests;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -27,6 +30,8 @@ import java.util.Collections;
 @Service
 public class TrainingService implements TrainingServiceInterface {
 
+
+    private static final Logger logger = LogManager.getLogger(TrainingService.class);
     private final RestTemplate restTemplate;
     private final Gson gson;
     @Autowired
@@ -50,6 +55,7 @@ public class TrainingService implements TrainingServiceInterface {
     }
 
     public ApiResponseDTO initiateTraining(Boolean isComplete) {
+        logger.debug("Iniciando sequência de treinamento. Completo? " + isComplete);
         try {
             String trainingFolder = isComplete ? completeTrainingFolder : expressTrainingFolder;
             apiUtils.generateAuxiliaryFolder(trainingFolder, false);
@@ -64,8 +70,10 @@ public class TrainingService implements TrainingServiceInterface {
             apiUtils.persistEventInDatabase(responseMPAI, type);
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Training initiated successfully!");
         } catch (IOException e) {
+            logger.error(e.getMessage());
             return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
         } catch (RestClientResponseException io) {
+            logger.error(io.getMessage());
             if (io.getRawStatusCode() == 400) {
                 ErrorMpaiDetailsDTO errorDetails = gson.fromJson(io.getResponseBodyAsString(), ErrorMpaiDetailsDTO.class);
                 return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), errorDetails , "Não foi possível iniciar o Reconhecimento." );

@@ -3,6 +3,8 @@ package com.mediaportal.faces_api.application.utils;
 import com.mediaportal.faces_api.application.dto.StatusMpaiDTO;
 import com.mediaportal.faces_api.application.services.ClassifyService;
 import com.mediaportal.faces_api.application.services.StatusServiceInterface;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,8 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class LoopRequests {
+
+    private static final Logger logger = LogManager.getLogger(LoopRequests.class);
 
     @Autowired
     public ApiUtilsInterface apiUtils;
@@ -32,13 +36,13 @@ public class LoopRequests {
 
     private Boolean isStatusChanged(int previousStatus, int currentStatus) {
         if (previousStatus != currentStatus) {
-            System.out.println("O status mudou de " + previousStatus + " para " + currentStatus);
+            logger.debug("O status mudou de " + previousStatus + " para " + currentStatus);
             return true;
         } else return false;
     }
 
     private void loopForStatus(String jobId, int type) throws RestClientException {
-
+        logger.debug("Iniciando thread para: " + jobId + " do tipo: " + type);
         boolean isJobFinished = false;
         int previousStatus = 1;
         int currentStatus;
@@ -74,7 +78,7 @@ public class LoopRequests {
                 }
 
             } else {
-                System.out.println("JOB está: " + statusName);
+                logger.debug("O JOB: " + jobId + "do tipo: " + type +" está: " + statusName);
                 waitOneMinute();
             }
         }
@@ -84,8 +88,7 @@ public class LoopRequests {
         try {
             TimeUnit.MINUTES.sleep(1);
         } catch (InterruptedException e) {
-            System.err.println("Erro ao aguardar. " + e.getMessage());
-//            e.printStackTrace();
+            logger.error(e.getMessage());
         }
     }
 

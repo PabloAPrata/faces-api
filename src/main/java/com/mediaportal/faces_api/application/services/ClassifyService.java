@@ -2,9 +2,12 @@ package com.mediaportal.faces_api.application.services;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import com.mediaportal.faces_api.Main;
 import com.mediaportal.faces_api.application.dto.*;
 import com.mediaportal.faces_api.application.utils.ApiUtilsInterface;
 import com.mediaportal.faces_api.application.utils.LoopRequests;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -25,6 +28,7 @@ import java.util.Map;
 @Service
 public class ClassifyService {
 
+    private static final Logger logger = LogManager.getLogger(ClassifyService.class);
     private final RestTemplate restTemplate;
     private final Gson gson;
     @Autowired
@@ -59,6 +63,7 @@ public class ClassifyService {
     }
 
     public ApiResponseDTO initiateRecognition() {
+        logger.debug("Iniciando sequência de reconhecimento...");
         try {
             apiUtils.generateAuxiliaryFolder(RECOGNITION_NAME_FOLDER, true);
 
@@ -72,8 +77,10 @@ public class ClassifyService {
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Recognition started successfully");
 
         } catch (IOException e) {
+            logger.error(e.toString());
             return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
         } catch (RestClientResponseException io) {
+            logger.error(io.toString());
             if (io.getRawStatusCode() == 400) {
                 ErrorMpaiDetailsDTO errorDetails = gson.fromJson(io.getResponseBodyAsString(), ErrorMpaiDetailsDTO.class);
                 return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), errorDetails, "Não foi possível iniciar o Reconhecimento.");
@@ -84,6 +91,7 @@ public class ClassifyService {
 
     public ApiResponseDTO initiateClassification() {
         try {
+            logger.debug("Iniciando sequência de agrupamento...");
 
             apiUtils.generateAuxiliaryFolder(GROUP_NAME_FOLDER, true);
 
@@ -98,9 +106,10 @@ public class ClassifyService {
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Cluster started successfully");
 
         } catch (IOException e) {
-            System.out.println(e.toString());
+            logger.error(e.toString());
             return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
         } catch (RestClientResponseException io) {
+            logger.error(io.toString());
             if (io.getRawStatusCode() == 400) {
                 ErrorMpaiDetailsDTO errorDetails = gson.fromJson(io.getResponseBodyAsString(), ErrorMpaiDetailsDTO.class);
                 return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), errorDetails, "Não foi possível iniciar o Reconhecimento.");
@@ -120,6 +129,7 @@ public class ClassifyService {
     }
 
     public ClientActivateJobDTO requestRecognizeToMpai() throws RestClientResponseException {
+        logger.debug("Requisitando MPAI...");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -143,6 +153,8 @@ public class ClassifyService {
     public void readGroupJSON(String jobId) {
         try {
 
+            logger.debug("Lendo JSON de grupo do jobId " + jobId);
+
             JsonObject jsonObject = JsonParser.parseReader(new FileReader(workFolder + GROUP_NAME_FOLDER + "/" + "unknown.json")).getAsJsonObject();
             JsonObject groupsObject = jsonObject.getAsJsonObject("groups");
             List<String> groupsList = new ArrayList<>();
@@ -158,16 +170,17 @@ public class ClassifyService {
             apiUtils.deleteAuxiliaryFolder(3);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.toString());
         }
     }
 
     private void requestInsertGroup(List<String> groupsList, String jobId) {
         UpdateFoldersDTO updateFoldersDTO = new UpdateFoldersDTO(groupsList, jobId);
         try {
+            logger.debug("Inserindo grupos no banco de dados.");
             restTemplate.put(brahmaUrl + "repository/data/group/update", updateFoldersDTO, Void.class);
         } catch (RestClientException e) {
-            System.out.println(e.getMessage());
+            logger.error(e.toString());
             throw new RestClientException("Erro persistir as informações no banco de dados." + e.toString());
         }
     }
@@ -179,7 +192,7 @@ public class ClassifyService {
 
         try {
 
-            Gson gson = new Gson();
+            logger.debug("Lendo JSON de reconhecimento do jobId " + jobId);
 
             FileReader fileReader = new FileReader(arquivoJSON);
             Type listaTipo = new TypeToken<List<RecognizeJsonDTO>>() {
@@ -194,7 +207,7 @@ public class ClassifyService {
 
             apiUtils.deleteAuxiliaryFolder(4);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.toString());
         }
     }
 

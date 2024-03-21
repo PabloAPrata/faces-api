@@ -1,8 +1,11 @@
 package com.mediaportal.faces_api.application.services;
 
 import com.google.gson.Gson;
+import com.mediaportal.faces_api.Main;
 import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
 import com.mediaportal.faces_api.application.dto.StatusMpaiDTO;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -12,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class StatusService implements StatusServiceInterface {
 
+    private static final Logger logger = LogManager.getLogger(StatusService.class);
     private RestTemplate restTemplate;
     private Gson gson;
     @Value("${paths.mpai}")
@@ -24,10 +28,11 @@ public class StatusService implements StatusServiceInterface {
 
     public ApiResponseDTO checkStatusJob(String job_id) {
 
+        logger.debug("Verificando status do job: " + job_id);
         try {
             return new ApiResponseDTO(200, requestStatusJob(job_id), "");
         } catch (HttpClientErrorException e) {
-            System.out.println(e.getMessage());
+            logger.error(e.getMessage());
             return new ApiResponseDTO(e.getStatusCode().value(), e.getResponseBodyAsString(), e.toString());
         }
 

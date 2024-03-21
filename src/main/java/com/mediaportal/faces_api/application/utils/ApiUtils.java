@@ -5,8 +5,11 @@ import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
 import com.mediaportal.faces_api.application.dto.TrainDTO;
 import com.mediaportal.faces_api.application.dto.UpdateEventDTO;
 import com.mediaportal.faces_api.application.services.StatusServiceInterface;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -20,8 +23,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,7 +30,7 @@ import java.util.regex.Pattern;
 @Service
 public class ApiUtils implements ApiUtilsInterface {
 
-    private static final String MPAI_BRIDGE_FILES_URL = "http://192.168.15.176:3001/";
+    private static final Logger logger = LogManager.getLogger(ApiUtils.class);
 
     private final RestTemplate restTemplate;
     private final StatusServiceInterface statusService;
@@ -66,7 +67,7 @@ public class ApiUtils implements ApiUtilsInterface {
                     // Se for um arquivo, deleta
                     if (file.isFile()) {
                         if (!file.delete()) {
-                            System.out.println("Falha ao deletar: " + file);
+                            logger.warn("Falha ao deletar: " + file);
                             return false;
                         }
                     }
@@ -95,28 +96,26 @@ public class ApiUtils implements ApiUtilsInterface {
         RestTemplate restTemplate = new RestTemplate();
         List<String> fileNames = new ArrayList<>();
 
-
-        // Construindo a URL com parâmetros, se necessário
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(MPAI_BRIDGE_FILES_URL + endpoint);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString("http://192.168.15.176:3001/" + endpoint);
 
         try {
-            // Fazendo a requisição GET e recebendo a resposta como uma string JSON
-            System.out.println("Requisitando JSON de grupos e rostos..");
+
+            logger.debug("Requisitando JSON de grupos e rostos..");
+
             ResponseEntity<String> responseEntity = restTemplate.exchange(builder.toUriString(), HttpMethod.GET, null, String.class);
             if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                // Extraindo a string JSON do corpo da resposta
+
                 String json = responseEntity.getBody();
 
-                // Chamando o método para extrair os fileNames do JSON
                 fileNames = extractFileNamesFromJson(json);
-                System.out.println("Grupos e rostos pegados com sucesso!");
+
             } else {
-                System.out.println("A requisição não foi bem-sucedida. Status code: " + responseEntity.getStatusCodeValue());
+                logger.error("A requisição não foi bem-sucedida. Status code: " + responseEntity.getStatusCodeValue());
             }
 
             return fileNames;
         } catch (Exception e) {
-            System.err.println("Erro ao obter a lista de pastas: " + e.getMessage());
+            logger.error("Erro ao obter a lista de pastas: " + e.getMessage());
             throw new IOException("Erro ao obter a lista de pastas do servidor.");
         }
     }
@@ -135,7 +134,7 @@ public class ApiUtils implements ApiUtilsInterface {
     public void createAuxiliaryFolder(String directory, String nameFolder) {
         File newFolder = new File(directory, "/" + nameFolder);
         if (!newFolder.exists() && !newFolder.mkdirs()) {
-            System.out.println("Failed to create directory: " + directory + nameFolder);
+            logger.error("Failed to create directory: " + directory + nameFolder);
         }
     }
 
@@ -145,12 +144,13 @@ public class ApiUtils implements ApiUtilsInterface {
 
         trainDTO.setType(type);
 
-        System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + trainDTO.getJobId() + " Type: " + trainDTO.getType());
+        logger.debug("Solicitando alteração no banco do Job_id: " + trainDTO.getJobId() + " Type: " + trainDTO.getType());
         restTemplate.postForEntity(brahmaUrl + "repository/event/new", trainDTO, Void.class);
 
     }
 
     public void generateAuxiliaryFolder(String nameTrainingFolder, Boolean bringUnknown) throws IOException {
+        logger.debug("Criando pasta " + nameTrainingFolder + " BringUnkown? " + bringUnknown);
         createAuxiliaryFolder(workFolder, nameTrainingFolder);
         copyFilesToAuxiliaryFolder(nameTrainingFolder, bringUnknown);
     }
@@ -181,11 +181,12 @@ public class ApiUtils implements ApiUtilsInterface {
         try {
             UpdateEventDTO updateEventDTO = new UpdateEventDTO(jobId, status);
 
-            System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + updateEventDTO.getJobId() + " Status: " + updateEventDTO.getStatus());
+            logger.debug("Solicitando ao brahma que persista os dados no banco. Job_id: " + updateEventDTO.getJobId() + " Status: " + updateEventDTO.getStatus());
 
             restTemplate.put(brahmaUrl + "repository/event/update", updateEventDTO, Void.class);
         } catch (RestClientException e) {
-            System.out.println(e.getMessage());
+
+            logger.error(e.getMessage());
             throw new RestClientException("Erro persistir as informações no banco de dados." + e.toString());
         }
     }
@@ -236,12 +237,13 @@ public class ApiUtils implements ApiUtilsInterface {
         if (folder.isDirectory() && folder.exists()) {
             boolean success = deleteFolder(folder);
             if (success) {
-                System.out.println("Pasta deletada com sucesso!");
+                logger.debug("Pasta " + folder + " deletada com sucesso!");
             } else {
-                System.out.println("Nem todos os arquivos foram deletados.");
+                logger.warn("Nem todos os arquivos foram deletados.");
             }
         } else {
-            System.out.println("A pasta não existe ou não é uma pasta válida.");
+            System.out.println();
+            logger.error("A pasta/arquivo " + folder + " não existe ou não é uma pasta válida.");
         }
     }
 
