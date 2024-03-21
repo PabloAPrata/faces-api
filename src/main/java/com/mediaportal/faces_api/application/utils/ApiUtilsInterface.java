@@ -20,7 +20,7 @@ public interface ApiUtilsInterface {
 
     List<String> extractFileNamesFromJson(String json);
 
-    List<String> getSchemaFilesFromDatabase();
+    List<String> getSchemaFilesFromDatabase() throws Exception;
 
     void changeDatabaseStatus(String jobId, int status) throws RestClientException;
 

@@ -40,7 +40,7 @@ public class LoopRequests {
     private void loopForStatus(String jobId, int type) throws RestClientException {
 
         boolean isJobFinished = false;
-        int previousStatus = 0;
+        int previousStatus = 1;
         int currentStatus;
         String statusName;
 

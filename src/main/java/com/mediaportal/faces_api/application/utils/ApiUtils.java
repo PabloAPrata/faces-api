@@ -1,12 +1,12 @@
 package com.mediaportal.faces_api.application.utils;
 
+import com.mediaportal.faces_api.application.dto.BrahmaResponseDTO;
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
 import com.mediaportal.faces_api.application.dto.TrainDTO;
 import com.mediaportal.faces_api.application.dto.UpdateEventDTO;
 import com.mediaportal.faces_api.application.services.StatusServiceInterface;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -30,11 +30,12 @@ import java.util.regex.Pattern;
 public class ApiUtils implements ApiUtilsInterface {
 
     private static final String MPAI_BRIDGE_FILES_URL = "http://192.168.15.176:3001/";
-    //    private final String MPAI_BRIDGE_FILES_URL = brahmaUrl + "repository/jobs/latest";
+
     private final RestTemplate restTemplate;
     private final StatusServiceInterface statusService;
     @Value("${paths.brahma}")
     private String brahmaUrl;
+
     @Value("${SHARED_FOLDER}")
     private String workFolder;
     @Value("${MAIN_FILES_FOLDER}")
@@ -83,22 +84,11 @@ public class ApiUtils implements ApiUtilsInterface {
         return folder.delete();
     }
 
-    public List<String> getSchemaFilesFromDatabase() {
+    public List<String> getSchemaFilesFromDatabase() throws RestClientException {
 
-        try {
+        BrahmaResponseDTO response = restTemplate.getForObject(brahmaUrl + "repository/files", BrahmaResponseDTO.class);
 
-            ResponseEntity<String[]> response = restTemplate.exchange(MPAI_BRIDGE_FILES_URL, HttpMethod.GET, null, String[].class);
-            String[] data = response.getBody();
-
-            if (data != null) {
-                return Arrays.asList(data);
-            } else {
-                return Collections.emptyList();
-            }
-        } catch (RestClientException e) {
-            System.err.println("Erro ao obter a lista de pastas: " + e.getMessage());
-            throw new RestClientException("Erro ao obter a lista de pastas e arquivos.");
-        }
+        return response.getData();
     }
 
     public List<String> getFileNamesFromJson(String endpoint) throws IOException {
@@ -155,10 +145,8 @@ public class ApiUtils implements ApiUtilsInterface {
 
         trainDTO.setType(type);
 
-
         System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + trainDTO.getJobId() + " Type: " + trainDTO.getType());
         restTemplate.postForEntity(brahmaUrl + "repository/event/new", trainDTO, Void.class);
-
 
     }
 
@@ -168,7 +156,8 @@ public class ApiUtils implements ApiUtilsInterface {
     }
 
     public void copyFilesToAuxiliaryFolder(String nameTrainingFolder, Boolean bringOnlyUnknown) throws IOException {
-        List<String> fileNames = getFileNamesFromJson("files");
+//        List<String> fileNames = getFileNamesFromJson("files");
+        List<String> fileNames = getSchemaFilesFromDatabase();
         for (String nameFolderPlusNameFile : fileNames) {
             String nameFolder = nameFolderPlusNameFile.split("/")[0];
             String nameFile = nameFolderPlusNameFile.split("/")[1];
