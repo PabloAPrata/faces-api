@@ -9,6 +9,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -28,7 +29,7 @@ import java.util.regex.Pattern;
 @Service
 public class ApiUtils implements ApiUtilsInterface {
 
-    private static final String MPAI_BRIDGE_FILES_URL = "http://localhost:3001/";
+    private static final String MPAI_BRIDGE_FILES_URL = "http://192.168.15.176:3001/";
     //    private final String MPAI_BRIDGE_FILES_URL = brahmaUrl + "repository/jobs/latest";
     private final RestTemplate restTemplate;
     private final StatusServiceInterface statusService;
@@ -148,19 +149,16 @@ public class ApiUtils implements ApiUtilsInterface {
         }
     }
 
-    public void persistEventInDatabase(ClientActivateJobDTO responseMPAI, int type) throws IOException {
+    public void persistEventInDatabase(ClientActivateJobDTO responseMPAI, int type) throws RestClientResponseException {
         TrainDTO trainDTO = new TrainDTO();
         trainDTO.setJobId(responseMPAI.getId());
 
         trainDTO.setType(type);
 
-        try {
-            System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + trainDTO.getJobId() + " Type: " + trainDTO.getType());
-            restTemplate.postForEntity(brahmaUrl + "repository/event/new", trainDTO, Void.class);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            throw new IOException("Erro persistir as informações no banco de dados." + e.toString());
-        }
+
+        System.out.println("Solicitando ao brahma que persista os dados no banco. Job_id:" + trainDTO.getJobId() + " Type: " + trainDTO.getType());
+        restTemplate.postForEntity(brahmaUrl + "repository/event/new", trainDTO, Void.class);
+
 
     }
 

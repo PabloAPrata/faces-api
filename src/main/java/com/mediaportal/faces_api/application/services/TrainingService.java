@@ -4,6 +4,7 @@ package com.mediaportal.faces_api.application.services;
 import com.google.gson.Gson;
 import com.mediaportal.faces_api.application.dto.ApiResponseDTO;
 import com.mediaportal.faces_api.application.dto.ClientActivateJobDTO;
+import com.mediaportal.faces_api.application.dto.ErrorMpaiDetailsDTO;
 import com.mediaportal.faces_api.application.dto.PostTrainingMPAIDTO;
 import com.mediaportal.faces_api.application.utils.ApiUtilsInterface;
 import com.mediaportal.faces_api.application.utils.LoopRequests;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -61,8 +63,14 @@ public class TrainingService implements TrainingServiceInterface {
 
             apiUtils.persistEventInDatabase(responseMPAI, type);
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Training initiated successfully!");
-        } catch (IOException | RestClientException e) {
-            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.toString());
+        } catch (IOException e) {
+            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
+        } catch (RestClientResponseException io) {
+            if (io.getRawStatusCode() == 400) {
+                ErrorMpaiDetailsDTO errorDetails = gson.fromJson(io.getResponseBodyAsString(), ErrorMpaiDetailsDTO.class);
+                return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), errorDetails , "Não foi possível iniciar o Reconhecimento." );
+            }
+            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null , io.getMessage() );
         }
     }
 

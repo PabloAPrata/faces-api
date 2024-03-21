@@ -7,12 +7,10 @@ import com.mediaportal.faces_api.application.utils.ApiUtilsInterface;
 import com.mediaportal.faces_api.application.utils.LoopRequests;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.FileReader;
@@ -73,9 +71,14 @@ public class ClassifyService {
             apiUtils.persistEventInDatabase(responseMPAI, 4);
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Recognition started successfully");
 
-        } catch (IOException | RestClientException e) {
-            System.out.println(e.toString());
+        } catch (IOException e) {
             return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
+        } catch (RestClientResponseException io) {
+            if (io.getRawStatusCode() == 400) {
+                ErrorMpaiDetailsDTO errorDetails = gson.fromJson(io.getResponseBodyAsString(), ErrorMpaiDetailsDTO.class);
+                return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), errorDetails, "Não foi possível iniciar o Reconhecimento.");
+            }
+            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, io.getMessage());
         }
     }
 
@@ -94,9 +97,15 @@ public class ClassifyService {
 
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Cluster started successfully");
 
-        } catch (IOException | RestClientException e) {
+        } catch (IOException e) {
             System.out.println(e.toString());
             return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
+        } catch (RestClientResponseException io) {
+            if (io.getRawStatusCode() == 400) {
+                ErrorMpaiDetailsDTO errorDetails = gson.fromJson(io.getResponseBodyAsString(), ErrorMpaiDetailsDTO.class);
+                return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), errorDetails, "Não foi possível iniciar o Reconhecimento.");
+            }
+            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, io.getMessage());
         }
     }
 
@@ -110,14 +119,15 @@ public class ClassifyService {
         return restTemplate.postForObject(mpaiUrl + "group", request, ClientActivateJobDTO.class);
     }
 
-    public ClientActivateJobDTO requestRecognizeToMpai() throws RestClientException {
+    public ClientActivateJobDTO requestRecognizeToMpai() throws RestClientResponseException {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         String json = recognizeMpaiParams();
         HttpEntity<String> request = new HttpEntity<>(json, headers);
 
-        return restTemplate.postForObject(mpaiUrl + "recognize", request, ClientActivateJobDTO.class);
+        ResponseEntity<ClientActivateJobDTO> response = restTemplate.exchange(mpaiUrl + "recognize", HttpMethod.POST, request, ClientActivateJobDTO.class);
+        return response.getBody();
     }
 
     public String groupMpaiParams() {
@@ -130,7 +140,7 @@ public class ClassifyService {
         return gson.toJson(postRecognizeDTO);
     }
 
-    public void readGroupJSON() {
+    public void readGroupJSON(String jobId) {
         try {
 
             JsonObject jsonObject = JsonParser.parseReader(new FileReader(workFolder + GROUP_NAME_FOLDER + "/" + "unknown.json")).getAsJsonObject();
@@ -143,7 +153,7 @@ public class ClassifyService {
                 }
             }
 
-            requestInsertGroup(groupsList);
+            requestInsertGroup(groupsList, jobId);
 
             apiUtils.deleteAuxiliaryFolder(3);
 
@@ -152,16 +162,17 @@ public class ClassifyService {
         }
     }
 
-    private void requestInsertGroup(List<String> groupsList) {
+    private void requestInsertGroup(List<String> groupsList, String jobId) {
+        UpdateFoldersDTO updateFoldersDTO = new UpdateFoldersDTO(groupsList, jobId);
         try {
-            restTemplate.put(brahmaUrl + "repository/data/group/update", groupsList, Void.class);
+            restTemplate.put(brahmaUrl + "repository/data/group/update", updateFoldersDTO, Void.class);
         } catch (RestClientException e) {
             System.out.println(e.getMessage());
             throw new RestClientException("Erro persistir as informações no banco de dados." + e.toString());
         }
     }
 
-    public void readRecognizeJSON() {
+    public void readRecognizeJSON(String jobId) {
         String arquivoJSON = workFolder + RECOGNITION_NAME_FOLDER + "/" + "unknown.json";
 
         List<String> listaFiles = new ArrayList<>();
@@ -179,7 +190,7 @@ public class ClassifyService {
                 listaFiles.add(arquivo.getClasse() + "/" + extractFileName(arquivo.getFile()));
             }
 
-            requestInsertGroup(listaFiles);
+            requestInsertGroup(listaFiles, jobId);
 
             apiUtils.deleteAuxiliaryFolder(4);
         } catch (IOException e) {

@@ -65,11 +65,11 @@ public class LoopRequests {
                     return;
                 }
                 if (type == 3) {
-                    classifyService.readGroupJSON();
+                    classifyService.readGroupJSON(jobId);
                     return;
                 }
                 if (type == 4) {
-                    classifyService.readRecognizeJSON();
+                    classifyService.readRecognizeJSON(jobId);
                     return;
                 }
 
