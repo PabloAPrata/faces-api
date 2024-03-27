@@ -155,8 +155,8 @@ public class ApiUtils implements ApiUtilsInterface {
         copyFilesToAuxiliaryFolder(nameTrainingFolder, bringUnknown);
     }
 
-    public void copyFilesToAuxiliaryFolder(String nameTrainingFolder, Boolean bringOnlyUnknown) throws IOException {
-//        List<String> fileNames = getFileNamesFromJson("files");
+    public void copyFilesToAuxiliaryFolder(String nameTrainingFolder, Boolean bringOnlyUnknown) {
+
         List<String> fileNames = getSchemaFilesFromDatabase();
         for (String nameFolderPlusNameFile : fileNames) {
             String nameFolder = nameFolderPlusNameFile.split("/")[0];
@@ -165,13 +165,19 @@ public class ApiUtils implements ApiUtilsInterface {
             Path origin = Paths.get(workFolder + mainQualifyFolder + "/" + nameFolder, nameFile);
             Path destination = Paths.get(workFolder + nameTrainingFolder, nameFolder);
 
-            if (bringOnlyUnknown && nameFolder.equals("unknown")) {
-                createAuxiliaryFolder(workFolder + nameTrainingFolder, nameFolder);
-                Files.copy(origin, destination.resolve(nameFile), StandardCopyOption.REPLACE_EXISTING);
-            } else if (!bringOnlyUnknown && !nameFolder.equals("unknown")) {
-                createAuxiliaryFolder(workFolder + nameTrainingFolder, nameFolder);
-                Files.copy(origin, destination.resolve(nameFile), StandardCopyOption.REPLACE_EXISTING);
+            try {
+                if (bringOnlyUnknown && nameFolder.equals("unknown")) {
+                    createAuxiliaryFolder(workFolder + nameTrainingFolder, nameFolder);
+                    Files.copy(origin, destination.resolve(nameFile), StandardCopyOption.REPLACE_EXISTING);
+                } else if (!bringOnlyUnknown && !nameFolder.equals("unknown")) {
+                    createAuxiliaryFolder(workFolder + nameTrainingFolder, nameFolder);
+                    Files.copy(origin, destination.resolve(nameFile), StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (IOException e) {
+                logger.error("ERROR AO COPIAR ARQUIVO: " + e.getMessage());
             }
+
+
 
         }
     }

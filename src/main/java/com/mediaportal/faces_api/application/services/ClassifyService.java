@@ -2,7 +2,6 @@ package com.mediaportal.faces_api.application.services;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
-import com.mediaportal.faces_api.Main;
 import com.mediaportal.faces_api.application.dto.*;
 import com.mediaportal.faces_api.application.utils.ApiUtilsInterface;
 import com.mediaportal.faces_api.application.utils.LoopRequests;
@@ -107,7 +106,9 @@ public class ClassifyService {
 
         } catch (IOException e) {
             logger.error(e.toString());
-            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), null, e.getMessage());
+            ErrorMpaiDetailsDTO errorDetails = new ErrorMpaiDetailsDTO();
+            errorDetails.setDetail(e.toString());
+            return new ApiResponseDTO(HttpStatus.SERVICE_UNAVAILABLE.value(), errorDetails, e.toString());
         } catch (RestClientResponseException io) {
             logger.error(io.toString());
             if (io.getRawStatusCode() == 400) {
@@ -119,6 +120,7 @@ public class ClassifyService {
     }
 
     public ClientActivateJobDTO requestGroupsToMpai() throws RestClientException {
+        logger.debug("Requisitando MPAI...");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 

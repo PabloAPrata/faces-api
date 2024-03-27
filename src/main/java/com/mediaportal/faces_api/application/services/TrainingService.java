@@ -65,9 +65,10 @@ public class TrainingService implements TrainingServiceInterface {
 
             String jobId = responseMPAI.getId();
 
+            apiUtils.persistEventInDatabase(responseMPAI, type);
+
             loopRequests.startLoop(jobId, type);
 
-            apiUtils.persistEventInDatabase(responseMPAI, type);
             return new ApiResponseDTO(HttpStatus.CREATED.value(), responseMPAI, "Training initiated successfully!");
         } catch (IOException e) {
             logger.error(e.getMessage());

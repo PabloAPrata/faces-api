@@ -44,7 +44,7 @@ public class LoopRequests {
     private void loopForStatus(String jobId, int type) throws RestClientException {
         logger.debug("Iniciando thread para: " + jobId + " do tipo: " + type);
         boolean isJobFinished = false;
-        int previousStatus = 1;
+        int previousStatus = 2;
         int currentStatus;
         String statusName;
 
